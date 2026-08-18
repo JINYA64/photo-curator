@@ -1,0 +1,40 @@
+name: 写真の自動選別
+
+on:
+  schedule:
+    # JST 8:00 と 20:00 に実行 (UTC 23:00 前日 / UTC 11:00)
+    - cron: "0 23 * * *"
+    - cron: "0 11 * * *"
+  workflow_dispatch: {}  # 手動実行もできるようにする
+
+permissions:
+  contents: write
+
+jobs:
+  curate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 依存パッケージのインストール
+        run: pip install -r requirements.txt
+
+      - name: 写真選別スクリプトを実行
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ROOT_FOLDER_ID: ${{ secrets.ROOT_FOLDER_ID }}
+          SCORE_THRESHOLD: "70"
+        run: python curate_photos.py
+
+      - name: 処理済みIDリストをコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add processed_ids.json
+          git diff --cached --quiet || git commit -m "処理済み写真リストを更新"
+          git push

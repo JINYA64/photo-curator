@@ -34,7 +34,7 @@ import io
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 ROOT_FOLDER_ID = os.environ["ROOT_FOLDER_ID"]
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 SCORE_THRESHOLD = int(os.environ.get("SCORE_THRESHOLD", "70"))
 SELECTED_FOLDER_NAME = "厳選"
 STATE_PATH = Path(__file__).parent / "processed_ids.json"

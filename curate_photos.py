@@ -34,7 +34,7 @@ import io
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 ROOT_FOLDER_ID = os.environ["ROOT_FOLDER_ID"]
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 SCORE_THRESHOLD = int(os.environ.get("SCORE_THRESHOLD", "70"))
 SELECTED_FOLDER_NAME = "厳選"
 STATE_PATH = Path(__file__).parent / "processed_ids.json"
@@ -136,10 +136,16 @@ def download_file_bytes(service, file_id: str) -> bytes:
     return buf.getvalue()
 
 
-def copy_file(service, file_id: str, new_parent_id: str, name: str) -> None:
-    service.files().copy(
-        fileId=file_id, body={"parents": [new_parent_id], "name": name}
-    ).execute()
+def create_shortcut(service, target_id: str, name: str, parent_id: str) -> None:
+    # ショートカットは実データを持たない参照のみのファイルなので、
+    # サービスアカウントの保存容量を消費せずに作成できる。元の写真はそのまま残る。
+    metadata = {
+        "name": name,
+        "mimeType": "application/vnd.google-apps.shortcut",
+        "shortcutDetails": {"targetId": target_id},
+        "parents": [parent_id],
+    }
+    service.files().create(body=metadata, fields="id").execute()
 
 
 # ---- Gemini評価 ------------------------------------------------------------
@@ -242,8 +248,8 @@ def process_folder(service, folder_id: str, folder_name: str, processed: set) ->
                     selected_folder_id = find_or_create_subfolder(
                         service, folder_id, SELECTED_FOLDER_NAME
                     )
-                copy_file(service, winner["id"], selected_folder_id, winner["name"])
-                print(f"    -> 「{SELECTED_FOLDER_NAME}」にコピーしました")
+                create_shortcut(service, winner["id"], winner["name"], selected_folder_id)
+                print(f"    -> 「{SELECTED_FOLDER_NAME}」にショートカットを作成しました")
 
         except Exception as e:  # noqa: BLE001
             print(f"  ! グループ {key} の処理でエラー: {e}", file=sys.stderr)
